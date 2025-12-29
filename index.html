@@ -1,119 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Measure Calculator</title>
-<style>
-body { font-family: system-ui; background:#111; color:#fff; display:flex; justify-content:center; }
-.calc { max-width:380px; width:100%; padding:10px; }
-.mode { text-align:right; color:#1e90ff; font-size:.9em; }
-.entry, .result {
-  background:#000; border-radius:8px; padding:12px; text-align:right;
-}
-.entry { font-size:1.3em; margin-bottom:6px; }
-.result { font-size:1.7em; background:#222; margin-bottom:10px; }
-
-.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-button {
-  padding:16px; font-size:1.1em; border:none; border-radius:8px;
-  background:#333; color:#fff;
-}
-.op { background:#555; }
-.eq { background:#1e90ff; grid-column:span 2; }
-.clr { background:#b22222; }
-.unit { background:#8b4513; }
-.toggle { background:#2e8b57; grid-column:span 2; }
-</style>
-</head>
-<body>
-
-<div class="calc">
-  <div id="mode" class="mode">Input: IN | Output: IN</div>
-  <div id="entry" class="entry">0</div>
-  <div id="result" class="result">0</div>
-
-  <div class="grid">
-    <button onclick="num(7)">7</button><button onclick="num(8)">8</button><button onclick="num(9)">9</button><button class="op" onclick="op('/')">÷</button>
-    <button onclick="num(4)">4</button><button onclick="num(5)">5</button><button onclick="num(6)">6</button><button class="op" onclick="op('*')">×</button>
-    <button onclick="num(1)">1</button><button onclick="num(2)">2</button><button onclick="num(3)">3</button><button class="op" onclick="op('-')">−</button>
-    <button onclick="num(0)">0</button><button onclick="frac(1)">1/16</button><button onclick="frac(2)">1/8</button><button class="op" onclick="op('+')">+</button>
-
-    <button onclick="frac(3)">3/16</button><button onclick="frac(4)">1/4</button><button onclick="frac(5)">5/16</button><button onclick="frac(6)">3/8</button>
-    <button onclick="frac(7)">7/16</button><button onclick="frac(8)">1/2</button><button class="eq" onclick="equals()">=</button><button class="clr" onclick="clearAll()">C</button>
-
-    <button class="unit" onclick="setInput('FT')">FT</button>
-    <button class="unit" onclick="setInput('IN')">IN</button>
-    <button class="toggle" onclick="toggleOut()">IN / FT-IN</button>
-  </div>
-</div>
-
 <script>
-let feet=0, inches=0, sixteenths=0;
-let inputMode='IN', outputMode='IN';
-let stack=[], ops=[];
+let current = { ft:0, in:0, frac:0 };
+let inputMode = 'IN';
+let outputMode = 'IN';
+let values = [];
+let ops = [];
 
-function update() {
-  let frac = sixteenths ? ` ${sixteenths}/16` : '';
-  let text = `${feet ? feet+"'" : ''} ${inches}${frac}"`.trim();
-  document.getElementById('entry').innerText = text || '0';
-  document.getElementById('mode').innerText = `Input: ${inputMode} | Output: ${outputMode}`;
+function updateEntry() {
+  let parts = [];
+  if (current.ft) parts.push(`${current.ft}'`);
+  if (current.in || current.frac) {
+    let f = current.frac ? ` ${current.frac}/16` : '';
+    parts.push(`${current.in}${f}"`);
+  }
+  document.getElementById('entry').innerText = parts.join(' ') || '0';
+  document.getElementById('mode').innerText =
+    `Input: ${inputMode} | Output: ${outputMode}`;
 }
 
-function num(n){
-  if(inputMode==='FT') feet = feet*10+n;
-  else inches = inches*10+n;
-  update();
+function num(n) {
+  if (inputMode === 'FT') current.ft = current.ft * 10 + n;
+  else current.in = current.in * 10 + n;
+  updateEntry();
 }
 
-function frac(f){ if(inputMode==='IN') sixteenths=f; update(); }
+function frac(f) {
+  if (inputMode === 'IN') current.frac = f;
+  updateEntry();
+}
 
-function setInput(m){ inputMode=m; update(); }
+function setInput(m) {
+  inputMode = m;
+  updateEntry();
+}
 
-function toInches(){ return feet*12 + inches + sixteenths/16; }
+function toInches() {
+  return current.ft * 12 + current.in + current.frac / 16;
+}
 
-function op(o){
-  stack.push(toInches());
+function commit() {
+  values.push(toInches());
+  current = { ft:0, in:0, frac:0 };
+  inputMode = 'IN';
+}
+
+function op(o) {
+  commit();
   ops.push(o);
-  feet=inches=sixteenths=0;
-  inputMode='IN';
-  update();
+  updateEntry();
 }
 
-function equals(){
-  stack.push(toInches());
-  let total = stack[0];
-  for(let i=0;i<ops.length;i++){
-    let n = stack[i+1];
-    if(ops[i]==='+') total+=n;
-    if(ops[i]==='-') total-=n;
-    if(ops[i]==='*') total*=n;
-    if(ops[i]==='/') total/=n;
+function equals() {
+  commit();
+  let total = values[0] || 0;
+
+  for (let i = 0; i < ops.length; i++) {
+    let n = values[i + 1];
+    if (ops[i] === '+') total += n;
+    if (ops[i] === '-') total -= n;
+    if (ops[i] === '*') total *= n;
+    if (ops[i] === '/') total /= n;
   }
-  total=Math.round(total*16)/16;
-  show(total);
-  stack=[]; ops=[];
+
+  total = Math.round(total * 16) / 16;
+  displayResult(total);
+  values = [];
+  ops = [];
 }
 
-function show(val){
-  if(outputMode==='IN'){
-    let w=Math.floor(val), f=Math.round((val-w)*16);
-    document.getElementById('result').innerText = f?`${w} ${f}/16`:w;
-  } else {
-    let ft=Math.floor(val/12), inch=val-ft*12;
-    let w=Math.floor(inch), f=Math.round((inch-w)*16);
+function displayResult(val) {
+  if (outputMode === 'IN') {
+    let w = Math.floor(val);
+    let f = Math.round((val - w) * 16);
     document.getElementById('result').innerText =
-      f?`${ft}' ${w} ${f}/16"`:`${ft}' ${w}"`;
+      f ? `${w} ${f}/16"` : `${w}"`;
+  } else {
+    let ft = Math.floor(val / 12);
+    let rem = val - ft * 12;
+    let w = Math.floor(rem);
+    let f = Math.round((rem - w) * 16);
+    document.getElementById('result').innerText =
+      f ? `${ft}' ${w} ${f}/16"` : `${ft}' ${w}"`;
   }
 }
 
-function toggleOut(){ outputMode = outputMode==='IN'?'FT':'IN'; }
-
-function clearAll(){
-  feet=inches=sixteenths=0; stack=[]; ops=[];
-  update(); document.getElementById('result').innerText='0';
+function toggleOut() {
+  outputMode = outputMode === 'IN' ? 'FT' : 'IN';
+  updateEntry();
 }
 
-update();
+function clearAll() {
+  current = { ft:0, in:0, frac:0 };
+  values = [];
+  ops = [];
+  document.getElementById('entry').innerText = '0';
+  document.getElementById('result').innerText = '0';
+}
+updateEntry();
 </script>
-</body>
-</html>
