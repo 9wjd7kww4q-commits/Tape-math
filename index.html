@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Calculator</title>
+<title>Construction Tape Calculator</title>
 <style>
 body{
   font-family: system-ui;
@@ -12,11 +12,11 @@ body{
   padding:20px;
 }
 .calc{
-  width:360px;
-  background:#1c1c1c;
-  border-radius:14px;
-  padding:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.4);
+  width:380px;
+  background:#fdd835; /* high viz yellow */
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
 }
 .display{
   background:#000;
@@ -24,40 +24,34 @@ body{
   padding:14px;
   color:#0f0;
   text-align:right;
-  margin-bottom:6px;
+  margin-bottom:8px;
 }
-.entry{ font-size:1.1em; opacity:.8; }
+.entry{ font-size:1.1em; opacity:.85; }
 .result{ font-size:1.8em; margin-top:4px; }
-.mode{ text-align:right; font-size:.75em; color:#aaa; margin:6px 0 10px; }
+.mode{ text-align:right; font-size:.75em; color:#111; margin-bottom:10px; }
 
 .grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:8px;
+  gap:6px;
 }
-button, input{
+button{
+  padding:16px;
+  font-size:1.1em;
   border:none;
   border-radius:10px;
-  font-size:1.1em;
-  color:#fff;
-}
-button{ padding:16px; background:#3a3a3a; }
-button:active{ background:#555; }
-.op{ background:#555; }
-.eq{ background:#1e90ff; grid-column:span 2; }
-.unit{ background:#8b5a2b; }
-.ctrl{ background:#b22222; }
-.toggle{ background:#2e8b57; grid-column:span 2; }
-.ce{ background:#666; }
-#fracInput{
-  padding:10px;
-  border-radius:6px;
-  width:100%;
-  margin-bottom:6px;
-  font-size:1.1em;
   color:#000;
+  font-weight:bold;
+  cursor:pointer;
 }
-.addFrac{background:#2e8b57; padding:10px; margin-bottom:8px; width:100%;}
+button:active{ background:#fff59d; }
+.op{ background:#ffee58; }
+.eq{ background:#fbc02d; grid-column:span 2; }
+.unit{ background:#f9a825; }
+.ctrl{ background:#d32f2f; color:#fff; }
+.toggle{ background:#2e8b57; color:#fff; grid-column:span 2; }
+.ce{ background:#f57f17; color:#000; }
+.frac{ background:#ffeb3b; }
 </style>
 </head>
 <body>
@@ -69,24 +63,22 @@ button:active{ background:#555; }
   </div>
   <div id="mode" class="mode">Input: IN | Output: IN</div>
 
-  <!-- Custom fraction input -->
-  <input id="fracInput" type="text" placeholder="Enter fraction (ex: 5/16)">
-  <button class="addFrac" onclick="addFraction()">Add Fraction</button>
-
   <div class="grid">
+    <!-- Numbers -->
     <button onclick="num(7)">7</button><button onclick="num(8)">8</button><button onclick="num(9)">9</button><button class="op" onclick="op('/')">÷</button>
     <button onclick="num(4)">4</button><button onclick="num(5)">5</button><button onclick="num(6)">6</button><button class="op" onclick="op('*')">×</button>
     <button onclick="num(1)">1</button><button onclick="num(2)">2</button><button onclick="num(3)">3</button><button class="op" onclick="op('-')">−</button>
-    <button onclick="num(0)">0</button><button onclick="frac(1)">1/16</button><button onclick="frac(2)">1/8</button><button class="op" onclick="op('+')">+</button>
+    <button onclick="num(0)">0</button><button class="ce" onclick="clearEntry()">CE</button><button class="ctrl" onclick="clearAll()">C</button><button class="op" onclick="op('+')">+</button>
 
-    <button onclick="frac(3)">3/16</button><button onclick="frac(4)">1/4</button><button onclick="frac(5)">5/16</button><button onclick="frac(6)">3/8</button>
-    <button onclick="frac(7)">7/16</button><button onclick="frac(8)">1/2</button>
-    <button class="eq" onclick="equals()">=</button>
-    <button class="ctrl" onclick="clearAll()">C</button>
+    <!-- Fraction buttons (1/16 → 15/16) -->
+    <button class="frac" onclick="frac(1)">1/16</button><button class="frac" onclick="frac(2)">1/8</button><button class="frac" onclick="frac(3)">3/16</button><button class="frac" onclick="frac(4)">1/4</button>
+    <button class="frac" onclick="frac(5)">5/16</button><button class="frac" onclick="frac(6)">3/8</button><button class="frac" onclick="frac(7)">7/16</button><button class="frac" onclick="frac(8)">1/2</button>
+    <button class="frac" onclick="frac(9)">9/16</button><button class="frac" onclick="frac(10)">5/8</button><button class="frac" onclick="frac(11)">11/16</button><button class="frac" onclick="frac(12)">3/4</button>
+    <button class="frac" onclick="frac(13)">13/16</button><button class="frac" onclick="frac(14)">7/8</button><button class="frac" onclick="frac(15)">15/16</button><button class="eq" onclick="equals()">=</button>
 
+    <!-- Units and toggle -->
     <button class="unit" onclick="setInput('FT')">FT</button>
     <button class="unit" onclick="setInput('IN')">IN</button>
-    <button class="ce" onclick="clearEntry()">CE</button>
     <button class="toggle" onclick="toggleOut()">IN / FT-IN</button>
   </div>
 </div>
@@ -97,12 +89,10 @@ let inputMode='IN',outputMode='IN';
 let stack=[],ops=[];
 let lastResult=null,explicitUnit=false;
 
-/* ---------- helpers ---------- */
 const gcd=(a,b)=>b?gcd(b,a%b):a;
 const simp=n=>n?`${n/gcd(n,16)}/${16/gcd(n,16)}`:'';
 function normalize(o){ if(o.frac>=16){o.in+=Math.floor(o.frac/16);o.frac%=16;} if(o.in>=12){o.ft+=Math.floor(o.in/12);o.in%=12;}}
 
-/* ---------- UI ---------- */
 function update(){
   normalize(current);
   let t=[];
@@ -115,53 +105,33 @@ function update(){
   document.getElementById('mode').innerText=`Input: ${inputMode} | Output: ${outputMode}`;
 }
 
-/* ---------- input ---------- */
 function num(n){ explicitUnit ||= inputMode==='FT'; if(inputMode==='FT')current.ft=current.ft*10+n; else current.in=current.in*10+n; update();}
 function frac(f){current.frac+=f; explicitUnit=true; normalize(current); update();}
 function setInput(m){inputMode=m; explicitUnit=true; update();}
 
-/* ---------- custom fraction ---------- */
-function addFraction(){
-  const val=document.getElementById('fracInput').value.trim();
-  if(!val)return;
-  const parts=val.split('/');
-  if(parts.length!==2){alert("Enter fraction as a/b"); return;}
-  let num=parseInt(parts[0]),den=parseInt(parts[1]);
-  if(isNaN(num)||isNaN(den)||den===0){alert("Invalid fraction"); return;}
-  let frac16=Math.round((num/den)*16);
-  current.frac+=frac16;
-  normalize(current);
-  update();
-  document.getElementById('fracInput').value='';
-  explicitUnit=true;
+function commit(){ 
+  let v=explicitUnit?current.ft*12+current.in+current.frac/16:current.in; 
+  stack.push(v); 
+  current={ft:0,in:0,frac:0}; explicitUnit=false; inputMode='IN';
 }
 
-/* ---------- math ---------- */
-function commit(){
-  let v=explicitUnit?current.ft*12+current.in+current.frac/16:current.in;
-  stack.push(v);
-  current={ft:0,in:0,frac:0};
-  explicitUnit=false;
-  inputMode='IN';
-}
 function op(o){ if(lastResult!==null && stack.length===0) stack.push(lastResult); else commit(); ops.push(o); }
-function equals(){
-  commit();
-  let t=stack[0];
-  for(let i=0;i<ops.length;i++){
-    let n=stack[i+1];
-    if(ops[i]==='+') t+=n;
-    if(ops[i]==='-') t-=n;
-    if(ops[i]==='*') t*=n;
-    if(ops[i]==='/') t/=n;
-  }
-  t=Math.round(t*16)/16;
-  lastResult=t;
-  show(t);
-  stack=[];ops=[];
+function equals(){ 
+  commit(); 
+  let t=stack[0]; 
+  for(let i=0;i<ops.length;i++){ 
+    let n=stack[i+1]; 
+    if(ops[i]==='+') t+=n; 
+    if(ops[i]==='-') t-=n; 
+    if(ops[i]==='*') t*=n; 
+    if(ops[i]==='/') t/=n; 
+  } 
+  t=Math.round(t*16)/16; 
+  lastResult=t; 
+  show(t); 
+  stack=[]; ops=[]; 
 }
 
-/* ---------- output ---------- */
 function show(v){
   let t16=Math.round(v*16);
   let ft=Math.floor(t16/(12*16));
@@ -176,7 +146,6 @@ function show(v){
   }
 }
 
-/* ---------- controls ---------- */
 function clearEntry(){ current={ft:0,in:0,frac:0}; explicitUnit=false; update();}
 function clearAll(){ clearEntry(); stack=[]; ops=[]; lastResult=null; document.getElementById('result').innerText='0'; }
 function toggleOut(){ outputMode=outputMode==='IN'?'FT':'IN'; if(lastResult!==null)show(lastResult); }
