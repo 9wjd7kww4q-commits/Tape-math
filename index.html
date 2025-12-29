@@ -2,157 +2,168 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Measure Calculator</title>
+<title>Tape Calculator</title>
 <style>
-body { font-family: system-ui; background:#111; color:#fff; display:flex; justify-content:center; }
-.calc { max-width:380px; width:100%; padding:10px; }
-.mode { text-align:right; color:#1e90ff; font-size:.9em; }
-.entry,.result { background:#000; border-radius:8px; padding:12px; text-align:right; }
-.entry { font-size:1.3em; margin-bottom:6px; }
-.result { font-size:1.7em; background:#222; margin-bottom:10px; }
-.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-button { padding:16px; font-size:1.1em; border:none; border-radius:8px; background:#333; color:#fff; }
-.op { background:#555; }
-.eq { background:#1e90ff; grid-column:span 2; }
-.clr { background:#b22222; }
-.unit { background:#8b4513; }
-.toggle { background:#2e8b57; grid-column:span 2; }
+body{
+  font-family: system-ui;
+  background:#2b2b2b;
+  display:flex;
+  justify-content:center;
+  padding:20px;
+}
+.calc{
+  width:360px;
+  background:#1c1c1c;
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+.display{
+  background:#000;
+  border-radius:10px;
+  padding:14px;
+  color:#0f0;
+  text-align:right;
+}
+.entry{ font-size:1.1em; opacity:.8; }
+.result{ font-size:1.8em; margin-top:4px; }
+.mode{ text-align:right; font-size:.75em; color:#aaa; margin:6px 0 10px; }
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+button{
+  padding:16px;
+  font-size:1.1em;
+  border:none;
+  border-radius:10px;
+  background:#3a3a3a;
+  color:#fff;
+}
+button:active{ background:#555; }
+.op{ background:#555; }
+.eq{ background:#1e90ff; grid-column:span 2; }
+.unit{ background:#8b5a2b; }
+.ctrl{ background:#b22222; }
+.toggle{ background:#2e8b57; grid-column:span 2; }
+.ce{ background:#666; }
 </style>
 </head>
 <body>
 
 <div class="calc">
+  <div class="display">
+    <div id="entry" class="entry">0</div>
+    <div id="result" class="result">0</div>
+  </div>
   <div id="mode" class="mode">Input: IN | Output: IN</div>
-  <div id="entry" class="entry">0</div>
-  <div id="result" class="result">0</div>
 
   <div class="grid">
     <button onclick="num(7)">7</button><button onclick="num(8)">8</button><button onclick="num(9)">9</button><button class="op" onclick="op('/')">÷</button>
     <button onclick="num(4)">4</button><button onclick="num(5)">5</button><button onclick="num(6)">6</button><button class="op" onclick="op('*')">×</button>
     <button onclick="num(1)">1</button><button onclick="num(2)">2</button><button onclick="num(3)">3</button><button class="op" onclick="op('-')">−</button>
-    <button onclick="num(0)">0</button><button onclick="frac(1)">1/16</button><button onclick="frac(2)">1/8</button><button class="op" onclick="op('+')">+</button>
+    <button onclick="num(0)">0</button><button onclick="frac(4)">1/4</button><button onclick="frac(2)">1/8</button><button class="op" onclick="op('+')">+</button>
 
-    <button onclick="frac(3)">3/16</button><button onclick="frac(4)">1/4</button><button onclick="frac(5)">5/16</button><button onclick="frac(6)">3/8</button>
-    <button onclick="frac(7)">7/16</button><button onclick="frac(8)">1/2</button><button class="eq" onclick="equals()">=</button><button class="clr" onclick="clearAll()">C</button>
+    <button onclick="frac(1)">1/16</button><button onclick="frac(8)">1/2</button>
+    <button class="eq" onclick="equals()">=</button><button class="ctrl" onclick="clearAll()">C</button>
 
     <button class="unit" onclick="setInput('FT')">FT</button>
     <button class="unit" onclick="setInput('IN')">IN</button>
+    <button class="ce" onclick="clearEntry()">CE</button>
     <button class="toggle" onclick="toggleOut()">IN / FT-IN</button>
   </div>
 </div>
 
 <script>
-let current = { ft:0, in:0, frac:0 };
-let inputMode='IN', outputMode='IN';
-let values=[], ops=[], lastResult=0;
-let explicitUnitUsed=false;
+let current={ft:0,in:0,frac:0};
+let inputMode='IN',outputMode='IN';
+let stack=[],ops=[];
+let lastResult=null,explicitUnit=false;
 
-/* ---------- helpers ---------- */
-function gcd(a,b){ return b ? gcd(b,a%b) : a; }
-function simplify(n,d=16){
-  if(!n) return '';
-  let g=gcd(n,d);
-  return `${n/g}/${d/g}`;
-}
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const simp=n=>n?`${n/gcd(n,16)}/${16/gcd(n,16)}`:'';
+
 function normalize(o){
-  if(o.frac>=16){ o.in+=Math.floor(o.frac/16); o.frac%=16; }
-  if(o.in>=12){ o.ft+=Math.floor(o.in/12); o.in%=12; }
+  if(o.frac>=16){o.in+=Math.floor(o.frac/16);o.frac%=16;}
+  if(o.in>=12){o.ft+=Math.floor(o.in/12);o.in%=12;}
 }
 
-/* ---------- UI ---------- */
-function updateEntry(){
+function update(){
   normalize(current);
-  let p=[];
-  if(current.ft) p.push(`${current.ft}'`);
+  let t=[];
+  if(current.ft)t.push(`${current.ft}'`);
   if(current.in||current.frac){
-    let f=simplify(current.frac);
-    p.push(`${current.in}${f?` ${f}`:''}"`);
+    let f=simp(current.frac);
+    t.push(`${current.in}${f?` ${f}`:''}"`);
   }
-  document.getElementById('entry').innerText=p.join(' ')||'0';
+  document.getElementById('entry').innerText=t.join(' ')||'0';
   document.getElementById('mode').innerText=`Input: ${inputMode} | Output: ${outputMode}`;
 }
 
-/* ---------- input ---------- */
 function num(n){
-  if(inputMode==='FT'){ current.ft=current.ft*10+n; explicitUnitUsed=true; }
+  explicitUnit ||= inputMode==='FT';
+  if(inputMode==='FT')current.ft=current.ft*10+n;
   else current.in=current.in*10+n;
-  updateEntry();
+  update();
 }
-function frac(f){
-  current.frac=f;
-  explicitUnitUsed=true;
-  updateEntry();
-}
-function setInput(m){
-  inputMode=m;
-  explicitUnitUsed=true;
-  updateEntry();
-}
+function frac(f){current.frac=f;explicitUnit=true;update();}
+function setInput(m){inputMode=m;explicitUnit=true;update();}
 
-/* ---------- math ---------- */
 function commit(){
-  let entry;
-  if(explicitUnitUsed){
-    entry={type:'measure', value:current.ft*12 + current.in + current.frac/16};
-  } else {
-    entry={type:'scalar', value:current.in};
-  }
-  values.push(entry);
+  let v=explicitUnit
+    ? current.ft*12+current.in+current.frac/16
+    : current.in;
+  stack.push(v);
   current={ft:0,in:0,frac:0};
+  explicitUnit=false;
   inputMode='IN';
-  explicitUnitUsed=false;
 }
 
-function op(o){ commit(); ops.push(o); updateEntry(); }
+function op(o){
+  if(lastResult!==null && stack.length===0){
+    stack.push(lastResult);
+  } else commit();
+  ops.push(o);
+}
 
 function equals(){
   commit();
-  let total=values[0].value;
-
+  let t=stack[0];
   for(let i=0;i<ops.length;i++){
-    let next=values[i+1];
-    let o=ops[i];
-
-    if(o==='+' && next.type==='measure') total+=next.value;
-    if(o==='-' && next.type==='measure') total-=next.value;
-    if(o==='*') total*=next.value;
-    if(o==='/') total/=next.value;
+    let n=stack[i+1];
+    if(ops[i]==='+')t+=n;
+    if(ops[i]==='-')t-=n;
+    if(ops[i]==='*')t*=n;
+    if(ops[i]==='/')t/=n;
   }
-
-  total=Math.round(total*16)/16;
-  lastResult=total;
-  display(total);
-  values=[]; ops=[];
+  t=Math.round(t*16)/16;
+  lastResult=t;
+  show(t);
+  stack=[];ops=[];
 }
 
-/* ---------- output ---------- */
-function display(val){
-  let t16=Math.round(val*16);
+function show(v){
+  let t16=Math.round(v*16);
   let ft=Math.floor(t16/(12*16));
   let rem=t16-ft*12*16;
-  let inch=Math.floor(rem/16);
-  let frac=rem%16;
+  let i=Math.floor(rem/16);
+  let f=rem%16;
 
   if(outputMode==='IN'){
-    let totalIn=ft*12+inch;
-    document.getElementById('result').innerText=
-      frac?`${totalIn} ${simplify(frac)}"`:`${totalIn}"`;
-  } else {
-    document.getElementById('result').innerText=
-      frac?`${ft}' ${inch} ${simplify(frac)}"`:`${ft}' ${inch}"`;
+    let tot=ft*12+i;
+    document.getElementById('result').innerText=f?`${tot} ${simp(f)}`:`${tot}`;
+  }else{
+    document.getElementById('result').innerText=f?`${ft}' ${i} ${simp(f)}`:`${ft}' ${i}"`;
   }
 }
 
-function toggleOut(){ outputMode=outputMode==='IN'?'FT':'IN'; display(lastResult); updateEntry(); }
-function clearAll(){
-  current={ft:0,in:0,frac:0};
-  values=[]; ops=[]; lastResult=0;
-  explicitUnitUsed=false;
-  document.getElementById('entry').innerText='0';
-  document.getElementById('result').innerText='0';
-  updateEntry();
-}
-updateEntry();
+function clearEntry(){ current={ft:0,in:0,frac:0}; explicitUnit=false; update(); }
+function clearAll(){ clearEntry(); stack=[]; ops=[]; lastResult=null; document.getElementById('result').innerText='0'; }
+function toggleOut(){ outputMode=outputMode==='IN'?'FT':'IN'; if(lastResult!==null)show(lastResult); }
+
+update();
 </script>
 </body>
 </html>
