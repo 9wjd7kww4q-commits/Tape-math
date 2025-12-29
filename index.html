@@ -45,74 +45,78 @@ button { padding:16px; font-size:1.1em; border:none; border-radius:8px; backgrou
 let current = { ft:0, in:0, frac:0 };
 let inputMode='IN', outputMode='IN';
 let values=[], ops=[], lastResult=0;
+let explicitUnitUsed=false;
 
 /* ---------- helpers ---------- */
 function gcd(a,b){ return b ? gcd(b,a%b) : a; }
-
 function simplify(n,d=16){
   if(!n) return '';
   let g=gcd(n,d);
   return `${n/g}/${d/g}`;
 }
-
-function normalize(obj){
-  if(obj.frac>=16){ obj.in+=Math.floor(obj.frac/16); obj.frac%=16; }
-  if(obj.in>=12){ obj.ft+=Math.floor(obj.in/12); obj.in%=12; }
+function normalize(o){
+  if(o.frac>=16){ o.in+=Math.floor(o.frac/16); o.frac%=16; }
+  if(o.in>=12){ o.ft+=Math.floor(o.in/12); o.in%=12; }
 }
 
 /* ---------- UI ---------- */
 function updateEntry(){
   normalize(current);
-  let parts=[];
-  if(current.ft) parts.push(`${current.ft}'`);
+  let p=[];
+  if(current.ft) p.push(`${current.ft}'`);
   if(current.in||current.frac){
     let f=simplify(current.frac);
-    parts.push(`${current.in}${f?` ${f}`:''}"`);
+    p.push(`${current.in}${f?` ${f}`:''}"`);
   }
-  document.getElementById('entry').innerText=parts.join(' ')||'0';
+  document.getElementById('entry').innerText=p.join(' ')||'0';
   document.getElementById('mode').innerText=`Input: ${inputMode} | Output: ${outputMode}`;
 }
 
 /* ---------- input ---------- */
 function num(n){
-  if(inputMode==='FT') current.ft=current.ft*10+n;
+  if(inputMode==='FT'){ current.ft=current.ft*10+n; explicitUnitUsed=true; }
   else current.in=current.in*10+n;
   updateEntry();
 }
-
 function frac(f){
-  if(inputMode==='IN'){ current.frac=f; normalize(current); }
+  current.frac=f;
+  explicitUnitUsed=true;
+  updateEntry();
+}
+function setInput(m){
+  inputMode=m;
+  explicitUnitUsed=true;
   updateEntry();
 }
 
-function setInput(m){ inputMode=m; updateEntry(); }
-
 /* ---------- math ---------- */
-function toInches(){
-  if(current.ft===0 && current.in===0 && current.frac===0) return null;
-  return current.ft*12 + current.in + current.frac/16;
-}
-
 function commit(){
-  let v=toInches();
-  values.push(v===null?'SCALAR':v);
+  let entry;
+  if(explicitUnitUsed){
+    entry={type:'measure', value:current.ft*12 + current.in + current.frac/16};
+  } else {
+    entry={type:'scalar', value:current.in};
+  }
+  values.push(entry);
   current={ft:0,in:0,frac:0};
   inputMode='IN';
+  explicitUnitUsed=false;
 }
 
 function op(o){ commit(); ops.push(o); updateEntry(); }
 
 function equals(){
   commit();
-  let total=values[0]||0;
+  let total=values[0].value;
 
   for(let i=0;i<ops.length;i++){
-    let n=values[i+1];
-    if(n==='SCALAR') continue;
-    if(ops[i]==='+') total+=n;
-    if(ops[i]==='-') total-=n;
-    if(ops[i]==='*') total*=n;
-    if(ops[i]==='/') total/=n;
+    let next=values[i+1];
+    let o=ops[i];
+
+    if(o==='+' && next.type==='measure') total+=next.value;
+    if(o==='-' && next.type==='measure') total-=next.value;
+    if(o==='*') total*=next.value;
+    if(o==='/') total/=next.value;
   }
 
   total=Math.round(total*16)/16;
@@ -123,32 +127,31 @@ function equals(){
 
 /* ---------- output ---------- */
 function display(val){
-  let total16=Math.round(val*16);
-  let ft=Math.floor(total16/(12*16));
-  let rem16=total16-ft*12*16;
-  let inch=Math.floor(rem16/16);
-  let frac=rem16%16;
+  let t16=Math.round(val*16);
+  let ft=Math.floor(t16/(12*16));
+  let rem=t16-ft*12*16;
+  let inch=Math.floor(rem/16);
+  let frac=rem%16;
 
   if(outputMode==='IN'){
     let totalIn=ft*12+inch;
     document.getElementById('result').innerText=
       frac?`${totalIn} ${simplify(frac)}"`:`${totalIn}"`;
-  }else{
+  } else {
     document.getElementById('result').innerText=
       frac?`${ft}' ${inch} ${simplify(frac)}"`:`${ft}' ${inch}"`;
   }
 }
 
 function toggleOut(){ outputMode=outputMode==='IN'?'FT':'IN'; display(lastResult); updateEntry(); }
-
 function clearAll(){
   current={ft:0,in:0,frac:0};
   values=[]; ops=[]; lastResult=0;
+  explicitUnitUsed=false;
   document.getElementById('entry').innerText='0';
   document.getElementById('result').innerText='0';
   updateEntry();
 }
-
 updateEntry();
 </script>
 </body>
