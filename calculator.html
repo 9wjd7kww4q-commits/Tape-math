@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tape Measure Calculator</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #111;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+  }
+  .calculator {
+    max-width: 360px;
+    width: 100%;
+    padding: 10px;
+  }
+  .display {
+    background: #000;
+    padding: 15px;
+    font-size: 1.6em;
+    text-align: right;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    min-height: 50px;
+  }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  button {
+    padding: 16px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border: none;
+    background: #333;
+    color: white;
+  }
+  button.operator { background: #555; }
+  button.equal { background: #1e90ff; grid-column: span 2; }
+  button.clear { background: #b22222; }
+  button.toggle { background: #2e8b57; grid-column: span 2; }
+</style>
+</head>
+<body>
+
+<div class="calculator">
+  <div id="display" class="display">0</div>
+
+  <div class="buttons">
+    <button onclick="add('7')">7</button>
+    <button onclick="add('8')">8</button>
+    <button onclick="add('9')">9</button>
+    <button class="operator" onclick="addOp('/')">÷</button>
+
+    <button onclick="add('4')">4</button>
+    <button onclick="add('5')">5</button>
+    <button onclick="add('6')">6</button>
+    <button class="operator" onclick="addOp('*')">×</button>
+
+    <button onclick="add('1')">1</button>
+    <button onclick="add('2')">2</button>
+    <button onclick="add('3')">3</button>
+    <button class="operator" onclick="addOp('-')">−</button>
+
+    <button onclick="add('0')">0</button>
+    <button onclick="addFraction(1,16)">1/16</button>
+    <button onclick="addFraction(1,8)">1/8</button>
+    <button class="operator" onclick="addOp('+')">+</button>
+
+    <button onclick="addFraction(3,16)">3/16</button>
+    <button onclick="addFraction(1,4)">1/4</button>
+    <button onclick="addFraction(5,16)">5/16</button>
+    <button onclick="addFraction(3,8)">3/8</button>
+
+    <button onclick="addFraction(7,16)">7/16</button>
+    <button onclick="addFraction(1,2)">1/2</button>
+    <button class="equal" onclick="calculate()">=</button>
+    <button class="clear" onclick="clearAll()">C</button>
+
+    <button class="toggle" onclick="toggleUnits()">IN / FT-IN</button>
+  </div>
+</div>
+
+<script>
+let expr = '';
+let lastValue = 0;
+let mode = 'IN'; // IN or FT
+
+function add(val) {
+  expr += val;
+  update(expr);
+}
+
+function addFraction(n, d) {
+  expr += `(${n}/${d})`;
+  update(expr);
+}
+
+function addOp(op) {
+  expr += ` ${op} `;
+  update(expr);
+}
+
+function clearAll() {
+  expr = '';
+  lastValue = 0;
+  update('0');
+}
+
+function update(text) {
+  document.getElementById('display').innerText = text;
+}
+
+function roundToSixteenth(val) {
+  return Math.round(val * 16) / 16;
+}
+
+function formatInches(val) {
+  let whole = Math.floor(val);
+  let frac = Math.round((val - whole) * 16);
+
+  if (frac === 16) {
+    whole += 1;
+    frac = 0;
+  }
+
+  if (frac === 0) return `${whole}`;
+  if (whole === 0) return `${frac}/16`;
+
+  return `${whole} ${frac}/16`;
+}
+
+function formatFeet(val) {
+  let feet = Math.floor(val / 12);
+  let inches = val - feet * 12;
+  let formattedInches = formatInches(inches);
+
+  if (formattedInches === '0') return `${feet}'`;
+  return `${feet}' ${formattedInches}"`;
+}
+
+function calculate() {
+  try {
+    let result = eval(expr);
+    result = roundToSixteenth(result);
+    lastValue = result;
+
+    expr = (mode === 'IN')
+      ? formatInches(result)
+      : formatFeet(result);
+
+    update(expr);
+  } catch {
+    update('Error');
+  }
+}
+
+function toggleUnits() {
+  if (!lastValue) return;
+
+  mode = (mode === 'IN') ? 'FT' : 'IN';
+
+  expr = (mode === 'IN')
+    ? formatInches(lastValue)
+    : formatFeet(lastValue);
+
+  update(expr);
+}
+</script>
+
+</body>
+</html>
