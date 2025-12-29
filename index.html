@@ -1,9 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tape Measure Calculator</title>
+<style>
+body { font-family: system-ui; background:#111; color:#fff; display:flex; justify-content:center; }
+.calc { max-width:380px; width:100%; padding:10px; }
+.mode { text-align:right; color:#1e90ff; font-size:.9em; }
+.entry, .result {
+  background:#000; border-radius:8px; padding:12px; text-align:right;
+}
+.entry { font-size:1.3em; margin-bottom:6px; }
+.result { font-size:1.7em; background:#222; margin-bottom:10px; }
+
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+button {
+  padding:16px; font-size:1.1em; border:none; border-radius:8px;
+  background:#333; color:#fff;
+}
+.op { background:#555; }
+.eq { background:#1e90ff; grid-column:span 2; }
+.clr { background:#b22222; }
+.unit { background:#8b4513; }
+.toggle { background:#2e8b57; grid-column:span 2; }
+</style>
+</head>
+<body>
+
+<div class="calc">
+  <div id="mode" class="mode">Input: IN | Output: IN</div>
+  <div id="entry" class="entry">0</div>
+  <div id="result" class="result">0</div>
+
+  <div class="grid">
+    <button onclick="num(7)">7</button><button onclick="num(8)">8</button><button onclick="num(9)">9</button><button class="op" onclick="op('/')">÷</button>
+    <button onclick="num(4)">4</button><button onclick="num(5)">5</button><button onclick="num(6)">6</button><button class="op" onclick="op('*')">×</button>
+    <button onclick="num(1)">1</button><button onclick="num(2)">2</button><button onclick="num(3)">3</button><button class="op" onclick="op('-')">−</button>
+    <button onclick="num(0)">0</button><button onclick="frac(1)">1/16</button><button onclick="frac(2)">1/8</button><button class="op" onclick="op('+')">+</button>
+
+    <button onclick="frac(3)">3/16</button><button onclick="frac(4)">1/4</button><button onclick="frac(5)">5/16</button><button onclick="frac(6)">3/8</button>
+    <button onclick="frac(7)">7/16</button><button onclick="frac(8)">1/2</button><button class="eq" onclick="equals()">=</button><button class="clr" onclick="clearAll()">C</button>
+
+    <button class="unit" onclick="setInput('FT')">FT</button>
+    <button class="unit" onclick="setInput('IN')">IN</button>
+    <button class="toggle" onclick="toggleOut()">IN / FT-IN</button>
+  </div>
+</div>
+
 <script>
 let current = { ft:0, in:0, frac:0 };
 let inputMode = 'IN';
 let outputMode = 'IN';
 let values = [];
 let ops = [];
+let lastResult = 0;
 
 function updateEntry() {
   let parts = [];
@@ -62,7 +112,8 @@ function equals() {
   }
 
   total = Math.round(total * 16) / 16;
-  displayResult(total);
+  lastResult = total;
+  displayResult(lastResult);
   values = [];
   ops = [];
 }
@@ -85,6 +136,7 @@ function displayResult(val) {
 
 function toggleOut() {
   outputMode = outputMode === 'IN' ? 'FT' : 'IN';
+  displayResult(lastResult);
   updateEntry();
 }
 
@@ -92,8 +144,13 @@ function clearAll() {
   current = { ft:0, in:0, frac:0 };
   values = [];
   ops = [];
+  lastResult = 0;
   document.getElementById('entry').innerText = '0';
   document.getElementById('result').innerText = '0';
+  updateEntry();
 }
+
 updateEntry();
 </script>
+</body>
+</html>
