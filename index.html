@@ -2,77 +2,87 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Measure Calculator</title>
+<title>Tape Measure Calculator FT-IN</title>
 <style>
-  body {
-    font-family: system-ui, sans-serif;
-    background: #111;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-  }
-  .calculator {
-    max-width: 360px;
-    width: 100%;
-    padding: 10px;
-  }
-  .unit-display {
-    text-align: right;
-    font-size: 1em;
-    color: #1e90ff;
-    margin-bottom: 3px;
-  }
-  .display {
-    background: #000;
-    padding: 15px;
-    font-size: 1.6em;
-    text-align: right;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    min-height: 50px;
-  }
-  .buttons {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  button {
-    padding: 16px;
-    font-size: 1.1em;
-    border-radius: 8px;
-    border: none;
-    background: #333;
-    color: white;
-  }
-  button.operator { background: #555; }
-  button.equal { background: #1e90ff; grid-column: span 2; }
-  button.clear { background: #b22222; }
-  button.toggle { background: #2e8b57; grid-column: span 2; }
+body {
+  font-family: system-ui, sans-serif;
+  background: #111;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+}
+.calculator {
+  max-width: 360px;
+  width: 100%;
+  padding: 10px;
+}
+.unit-display {
+  text-align: right;
+  font-size: 1em;
+  color: #1e90ff;
+}
+.entry-display {
+  background: #000;
+  padding: 15px;
+  font-size: 1.4em;
+  text-align: right;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  min-height: 40px;
+}
+.result-display {
+  background: #222;
+  padding: 10px;
+  font-size: 1.6em;
+  text-align: right;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  min-height: 50px;
+}
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+button {
+  padding: 16px;
+  font-size: 1.1em;
+  border-radius: 8px;
+  border: none;
+  background: #333;
+  color: white;
+}
+button.operator { background: #555; }
+button.equal { background: #1e90ff; grid-column: span 2; }
+button.clear { background: #b22222; }
+button.toggle { background: #2e8b57; grid-column: span 2; }
+button.ftin { background: #8b4513; }
 </style>
 </head>
 <body>
 
 <div class="calculator">
   <div id="unit" class="unit-display">Mode: IN</div>
-  <div id="display" class="display">0</div>
+  <div id="entry" class="entry-display">0</div>
+  <div id="display" class="result-display">0</div>
 
   <div class="buttons">
-    <button onclick="add('7')">7</button>
-    <button onclick="add('8')">8</button>
-    <button onclick="add('9')">9</button>
+    <button onclick="addNumber('7')">7</button>
+    <button onclick="addNumber('8')">8</button>
+    <button onclick="addNumber('9')">9</button>
     <button class="operator" onclick="addOp('/')">÷</button>
 
-    <button onclick="add('4')">4</button>
-    <button onclick="add('5')">5</button>
-    <button onclick="add('6')">6</button>
+    <button onclick="addNumber('4')">4</button>
+    <button onclick="addNumber('5')">5</button>
+    <button onclick="addNumber('6')">6</button>
     <button class="operator" onclick="addOp('*')">×</button>
 
-    <button onclick="add('1')">1</button>
-    <button onclick="add('2')">2</button>
-    <button onclick="add('3')">3</button>
+    <button onclick="addNumber('1')">1</button>
+    <button onclick="addNumber('2')">2</button>
+    <button onclick="addNumber('3')">3</button>
     <button class="operator" onclick="addOp('-')">−</button>
 
-    <button onclick="add('0')">0</button>
+    <button onclick="addNumber('0')">0</button>
     <button onclick="addFraction(1,16)">1/16</button>
     <button onclick="addFraction(1,8)">1/8</button>
     <button class="operator" onclick="addOp('+')">+</button>
@@ -87,6 +97,8 @@
     <button class="equal" onclick="calculate()">=</button>
     <button class="clear" onclick="clearAll()">C</button>
 
+    <button class="ftin" onclick="startFeet()">FT</button>
+    <button class="ftin" onclick="startInches()">IN</button>
     <button class="toggle" onclick="toggleUnits()">Toggle IN / FT-IN</button>
   </div>
 </div>
@@ -94,90 +106,91 @@
 <script>
 let expr = '';
 let lastValue = 0;
-let mode = 'IN'; // IN or FT
+let mode = 'IN'; // output mode: IN or FT
+let entryFeet = 0;
+let entryInches = 0;
+let entryFraction = 0;
+let entryMode = 'IN'; // input mode: 'FT' or 'IN'
 
-function add(val) {
-  expr += val;
-  update(expr);
+function updateDisplays() {
+  let entryText = '';
+  if (entryMode === 'FT') entryText = entryFeet + "'";
+  else {
+    let frac = entryFraction > 0 ? ` ${entryFraction}/16` : '';
+    entryText = `${entryInches}${frac}"`;
+  }
+  document.getElementById('unit').innerText = `Mode: ${mode} | Input: ${entryMode}`;
+  document.getElementById('entry').innerText = entryText || '0';
+  document.getElementById('display').innerText = expr || lastValue || '0';
 }
 
-function addFraction(n, d) {
-  expr += `(${n}/${d})`;
-  update(expr);
+function addNumber(n) {
+  if (entryMode === 'FT') entryFeet = entryFeet*10 + parseInt(n);
+  else entryInches = entryInches*10 + parseInt(n);
+  updateDisplays();
 }
+
+function addFraction(n,d) {
+  if (entryMode === 'IN') entryFraction = n/d*16; // store as sixteenths
+  updateDisplays();
+}
+
+function startFeet() { entryMode='FT'; updateDisplays(); }
+function startInches() { entryMode='IN'; updateDisplays(); }
 
 function addOp(op) {
-  expr += ` ${op} `;
-  update(expr);
+  // Convert current FT+IN entry to inches
+  let total = entryFeet*12 + entryInches + entryFraction/16;
+  expr += total + ` ${op} `;
+  entryFeet=entryInches=entryFraction=0;
+  entryMode='IN';
+  updateDisplays();
 }
 
 function clearAll() {
-  expr = '';
-  lastValue = 0;
-  update('0');
+  expr=''; lastValue=0; entryFeet=entryInches=entryFraction=0; entryMode='IN';
+  updateDisplays();
 }
 
-function update(text) {
-  document.getElementById('display').innerText = text;
-  document.getElementById('unit').innerText = `Mode: ${mode}`;
-}
-
-function roundToSixteenth(val) {
-  return Math.round(val * 16) / 16;
-}
+function roundToSixteenth(val) { return Math.round(val*16)/16; }
 
 function formatInches(val) {
   let whole = Math.floor(val);
-  let frac = Math.round((val - whole) * 16);
-
-  if (frac === 16) {
-    whole += 1;
-    frac = 0;
-  }
-
-  if (frac === 0) return `${whole}`;
-  if (whole === 0) return `${frac}/16`;
-
+  let frac = Math.round((val-whole)*16);
+  if (frac===16){ whole++; frac=0;}
+  if (frac===0) return `${whole}`;
+  if (whole===0) return `${frac}/16`;
   return `${whole} ${frac}/16`;
 }
 
-function formatFeet(val) {
-  let feet = Math.floor(val / 12);
-  let inches = val - feet * 12;
-  let formattedInches = formatInches(inches);
-
-  if (formattedInches === '0') return `${feet}'`;
-  return `${feet}' ${formattedInches}"`;
+function formatFeet(val){
+  let feet=Math.floor(val/12);
+  let inches=val-feet*12;
+  let formatted=formatInches(inches);
+  if(formatted==='0') return `${feet}'`;
+  return `${feet}' ${formatted}"`;
 }
 
-function calculate() {
-  try {
-    let result = eval(expr);
-    result = roundToSixteenth(result);
-    lastValue = result;
-
-    expr = (mode === 'IN')
-      ? formatInches(result)
-      : formatFeet(result);
-
-    update(expr);
-  } catch {
-    update('Error');
-  }
+function calculate(){
+  try{
+    let total=eval(expr);
+    total=roundToSixteenth(total);
+    lastValue=total;
+    expr=(mode==='IN')?formatInches(total):formatFeet(total);
+    entryFeet=entryInches=entryFraction=0;
+    entryMode='IN';
+    updateDisplays();
+  }catch{ document.getElementById('display').innerText='Error';}
 }
 
-function toggleUnits() {
-  if (!lastValue && expr === '') return;
-
-  mode = (mode === 'IN') ? 'FT' : 'IN';
-
-  expr = (mode === 'IN')
-    ? formatInches(lastValue)
-    : formatFeet(lastValue);
-
-  update(expr);
+function toggleUnits(){
+  if(!lastValue) return;
+  mode=(mode==='IN')?'FT':'IN';
+  expr=(mode==='IN')?formatInches(lastValue):formatFeet(lastValue);
+  updateDisplays();
 }
+
+updateDisplays();
 </script>
-
 </body>
 </html>
